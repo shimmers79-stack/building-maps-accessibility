@@ -17,7 +17,31 @@ function speakStep(){if(!speechAvailable)return;cancelSpeech();const token=speak
 function update(){cancelSpeech();spokenIndex=0;const entrance=$('entrance').value,room=$('room').value,mode=document.querySelector('input[name="mode"]:checked').value,dest=rooms.find(r=>r.id===room),start=starts[entrance],upstairs=dest.floor===2;const connector=mode==='elevator'?{x:295,label:lang==='es'?'ascensor':'elevator'}:Math.abs(start.x-95)+Math.abs(dest.x-95)<=Math.abs(start.x-495)+Math.abs(dest.x-495)?{x:95,label:lang==='es'?'escalera 1':'Staircase 1'}:{x:495,label:lang==='es'?'escalera 2':'Staircase 2'};const stop=point(upstairs?connector.x:dest.x,200);const route1=[point(start.x,start.y),stop,...(!upstairs?[point(dest.x,dest.doorY)]:[])];const route2=[point(connector.x,200),point(dest.x,200),point(dest.x,dest.doorY)];
 $('noticeTop').textContent=lang==='es'?`EL SALÓN ${room} ESTÁ EN EL`:`ROOM ${room} IS ON THE`;$('floorNotice').textContent=upstairs?(lang==='es'?'SEGUNDO PISO ↑':'SECOND FLOOR ↑'):(lang==='es'?'PRIMER PISO':'FIRST FLOOR');$('noticeSub').textContent=upstairs?(lang==='es'?'Sigue la ruta hasta el ascensor o las escaleras. Después, desliza hacia abajo para ver el segundo piso.':'Follow the route to the elevator or stairs, then scroll down for Floor 2.'):(lang==='es'?'Tu salón está en el piso de entrada.':'Your destination is on the entrance level.');$('floor1sub').textContent=upstairs?(lang==='es'?`Comienza aquí — dirígete al ${connector.label}`:`Start here — go to ${connector.label}`):(lang==='es'?`Sigue la ruta al salón ${room}`:`Follow the route to Room ${room}`);$('floor2sub').textContent=lang==='es'?`Continúa desde el ${connector.label} hasta el salón ${room}`:`Continue from ${connector.label} to Room ${room}`;
 $('map1').innerHTML=mapSvg(1,route1,route1[0],route1[route1.length-1],room,entrance);$('secondFloor').classList.toggle('hidden',!upstairs);if(upstairs)$('map2').innerHTML=mapSvg(2,route2,route2[0],route2[route2.length-1],room,entrance);
-const steps=lang==='es'?[`Entra por la entrada ${entrance} en el primer piso.`,`Sigue la línea marcada hasta ${upstairs?'el '+connector.label:'el salón '+room}.`,...(upstairs?[`Toma el ${connector.label} al segundo piso.`,`En el segundo piso, sigue la ruta marcada hasta el salón ${room}.`]:[]),`Has llegado al salón ${room}.`]:[`Enter through Entrance ${entrance} on Floor 1.`,`Follow the highlighted route to ${upstairs?'the '+connector.label:'Room '+room}.`,...(upstairs?[`Take the ${connector.label} to Floor 2.`,`On Floor 2, follow the highlighted route to Room ${room}.`]:[]),`You have arrived at Room ${room}.`];
+const steps=[];const es=lang==='es';const add=(en,sp)=>steps.push(es?sp:en);
+add(`Enter through Entrance ${entrance} on Floor 1.`,`Entra por la entrada ${entrance} en el primer piso.`);
+if(upstairs){
+  const target=mode==='elevator'?'elevator':'stairs';
+  add(`Go straight to the ${target}.`,`Sigue derecho hasta ${mode==='elevator'?'el elevador':'las escaleras'}.`);
+  add(`Take the ${target} to the second floor.`,`Sube al segundo piso por ${mode==='elevator'?'el elevador':'las escaleras'}.`);
+}else{
+  add(`Go straight down the hallway.`,`Sigue derecho por el pasillo.`);
+}
+const hallwayStart=upstairs?connector.x:start.x;
+const dx=dest.x-hallwayStart;
+const heading=upstairs?(dx>0?'right':dx<0?'left':null):(entrance==='A'?'right':'left');
+if(upstairs&&dx!==0){
+  add(`On the second floor, ${dx>0?'turn right':'turn left'} and continue along the hallway.`,`En el segundo piso, ${dx>0?'gira a la derecha':'gira a la izquierda'} y continúa por el pasillo.`);
+}else if(upstairs){
+  add('On the second floor, continue to the connecting hallway.','En el segundo piso, continúa hasta el pasillo de conexión.');
+}
+const side=dest.doorY===135?'up':'down';
+if(heading){
+  const onRight=(heading==='right'&&side==='down')||(heading==='left'&&side==='up');
+  add(`Room ${room} will be on your ${onRight?'right':'left'}.`,`El salón ${room} estará a tu ${onRight?'derecha':'izquierda'}.`);
+}else{
+  add(`Continue along the connecting hallway to Room ${room}.`,`Continúa por el pasillo de conexión hasta el salón ${room}.`);
+}
+add(`You have arrived at Room ${room}.`,`Has llegado al salón ${room}.`);
 spokenSteps=steps;voiceUi();$('steps').replaceChildren(...steps.map(step=>{const li=document.createElement('li');li.textContent=step;return li}));$('routeSummary').textContent=lang==='es'?`Ruta desde la entrada ${entrance} hasta el salón ${room}, ${upstairs?'segundo':'primer'} piso, ${mode==='elevator'?'por ascensor':'por escaleras'}.`:`Route from Entrance ${entrance} to Room ${room}, Floor ${dest.floor}${upstairs?', via '+connector.label:''}.`;
 $('announcement').textContent=lang==='es'?`Ruta actualizada. Entrada ${entrance}. Salón ${room}. ${upstairs?'Segundo':'Primer'} piso. Consulta las indicaciones paso a paso.`:`Route updated. Entrance ${entrance}. Room ${room}. Floor ${dest.floor}. Read the step-by-step directions.`;
 }
